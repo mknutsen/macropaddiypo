@@ -28,6 +28,7 @@ String reading = "";
 
 // Create the OLED display
 Adafruit_SH1106G display = Adafruit_SH1106G(128, 64, mosi_pin, sclk_pin, dc_pin, rst_pin, cs_pin);
+bool LEDS[12];
 
 // Create the rotary encoder
 RotaryEncoder encoder(PIN_ROTA, PIN_ROTB, RotaryEncoder::LatchMode::FOUR3);
@@ -77,54 +78,51 @@ void setup() {
 
 void loop()
 {
-  if (Serial.available() > 0) {
-      reading.concat(Serial.readString());
-      int newLinePos = reading.indexOf("\n");
-      int index = reading.indexOf("abc123");
-      if (newLinePos >= 0 && index < newLinePos)
-      {
-        int num = reading.substring(index, newLinePos).substring(9).toInt();
-        if (reading.indexOf("abc123-i"))
+    if (Serial.available() > 0) {
+        reading.concat(Serial.readString());
+        int newLinePos = reading.indexOf("\n");
+        int index = reading.indexOf("abc123");
+        if (newLinePos >= 0 && index < newLinePos)
         {
-          pixels.setPixelColor(num - 1, 124,252,0);
+            int num = reading.substring(index, newLinePos).substring(9).toInt();
+            // will not be 0 indexed on input
+            num -= 1;
+            if (reading.indexOf("abc123-i"))
+            {
+                LEDS[num] = true;
+            }
+            else if (reading.indexOf("abc123-d"))
+            {
+                LEDS[num] = false;
+            }
+            reading = "";
         }
-        else if (reading.indexOf("abc123-d"))
+        else if (index > newLinePos)
         {
-          pixels.setPixelColor(num - 1, 0, 0, 0);
-          
+            reading = "";
         }
-        
-        reading = "";
-        
-      }
-      else if (index > newLinePos)
-      {
-        reading = "";
-        
-      }
-      
-    
-  }
-
-  for (int i = 1; i <= 12; i++)
-  {
-    if (digitalRead(i) == LOW)
-    {
-       pixels.setPixelColor((i - 1), 124,252,0);
-       
-       char buffer[14];
-       sprintf(buffer, "abc123-p-%d", i);
-       Serial.println(buffer);
     }
-    else
-    {
-      pixels.setPixelColor((i - 1), 0,0,0);
-    }
-    
-  }
-  pixels.show();
 
-  pixels.show();
-  
-  display.display();
+    for (int i = 1; i <= 12; i++)
+    {
+        if (digitalRead(i) == LOW)
+        {
+            char buffer[14];
+            sprintf(buffer, "abc123-p-%d", i);
+            Serial.println(buffer);
+        }
+
+    }
+
+    for (int i = 0; i <= 12; i++)
+    {
+        // green if the button is currently being pressed
+        if (digitalRead(i) == LOW) {pixels.setPixelColor((i - 1), 124,252,0);}
+        // blue if its not being pressed and it has been sequenced
+        else if (LEDS[i]) {pixels.setPixelColor((i - 1), 240,248,255);}
+        // off otherwise 
+        else { pixels.setPixelColor((i - 1), 0,0,0); }
+    }
+    pixels.show();
+    display.display();
 }
